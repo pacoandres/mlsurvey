@@ -1,0 +1,16 @@
+<?php
+$db_host='host ip';
+$db_name='database name';
+$db_user='database user';
+$db_pass='database password';
+$db_port=3306;
+
+/** Use this if using UNIX sockets
+*/
+//$db_port='/run/mysqld/mysqld.sock';
+
+//If database shared with others and use a table preffix.
+$db_prefix='';
+
+//In production should be 0.
+$log_level=3; //0: error, 1: warn, 2: info, 3: debug.

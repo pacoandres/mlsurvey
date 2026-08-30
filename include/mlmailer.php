@@ -1,0 +1,97 @@
+<?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+require_once 'vendor/autoload.php'; //For PHPMailer as installed via composer.
+require_once 'utils/dbutils.php';
+
+class MLMailer extends PHPMailer {
+    public const NO_METHOD = 0;
+    public const SMTP_METHOD = 1;
+    public const SENDMAIL_METHOD = 2;
+
+    public const METHODS = [
+        self::NO_METHOD => '',
+        self::SMTP_METHOD => 'SMTP',
+        self::SENDMAIL_METHOD => 'Sendmail',
+    ];
+
+    public const ENCRYPTION = [
+        0 => "",
+        self::ENCRYPTION_SMTPS => "SSL",
+        self::ENCRYPTION_STARTTLS => "STARTTLS"
+    ];
+    private $m_from = "";
+    public function configure (){
+        $db = dbConn ();
+        try {
+            $query = $db->prepare ("SELECT * FROM {SystemConfig} LIMIT 1");
+            $query->execute ();
+            if ($query->rowCount () == 0){
+                throw new Exception("No server settings not found. Configure them first.");
+                return;
+            }
+            $row = $query->fetch ();
+            if (is_null($row['emailmethod']) || $row['emailmethod'] == self::NO_METHOD){
+                throw new Exception("Email settings not found. Configure them first.");
+                return;
+            }
+            $method = $row['emailmethod'];
+            if ($method == self::SMTP_METHOD){
+                $this->configSMTP ($row);
+            }
+            else if ($method == self::SENDMAIL_METHOD){
+                $this->configSendmail ();
+            }
+            else {
+                throw new Exception("Unkown email method configured. Method: {$method}.");
+            }
+            $this->m_from = $row['emailfrom'];
+            $this->CharSet = self::CHARSET_UTF8;
+            $this->Encoding = self::ENCODING_BASE64;
+        }
+        catch (Exception $e){
+            throw $e;
+        }
+    }
+
+    private function configSMTP ($config){
+        $this->isSMTP ();
+        //$this->SMTPDebug = SMTP::DEBUG_SERVER;
+        $this->Host = $config['emailserver'];
+        $this->Port = $config['emailport'];
+        $this->SMTPAuth = true;
+        $this->Username = $config['emailuser'];
+        $this->Password = $config['emailpasswd'];
+        $this->SMTPSecure = $config['emailsecurity'];
+    }
+
+    private function configSendmail (){
+        $this->isSendmail ();
+    }
+
+    public function sendTest ($recipient){
+        $this->setFrom ($this->m_from);
+        $recipients = explode (",", $recipient);
+        foreach ($recipients as $key => $address) {
+            $this->addAddress (trim($address));
+        }
+        $this->Subject = "Mensaje de prueba de ML";
+        //This could be better in an external file or something
+        $this->Body = "Es un mensaje de prueba de Menos Lectivas";
+
+        if (!$this->send ()){
+            throw new Exception("Error {$this->ErrorInfo} sending test email.");
+        }
+    }
+
+    public function sendCode ($recipient, $code, $surveyname){
+        $this->setFrom ($this->m_from);
+        $this->addAddress ($recipient);
+        $this->Subject = "Código para opinar en la consulta {$surveyname}";
+        $this->Body = "El código para opinar en la consulta {$surveyname} es:\n{$code}";
+        if (!$this->send ()){
+            throw new Exception("Error {$this->ErrorInfo} sending code email.");
+        }
+    }
+}

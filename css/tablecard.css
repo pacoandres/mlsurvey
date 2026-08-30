@@ -1,0 +1,78 @@
+/* This container provides the light gray background for the cards to sit on. */
+.card-table-container {
+    background-color: #f4f7f9;
+    padding: 20px;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.card-like-table {
+    /*width: 100%;*/
+    /* Key to creating the gaps between rows */
+    border-collapse: separate;
+    border-spacing: 0 10px; /* 0 horizontal, 10px vertical spacing */
+}
+
+/* Visually hide the table header, but keep it for screen readers. */
+/*.card-like-table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+}*/
+.card-like-table thead {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    font-weight: 600 !important;
+    color: rgb(49,164,88);
+    font-size: 1.2em;
+}
+
+.card-like-table tbody tr {
+    /* Each row acts as a card container */
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-radius: 6px;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.card-like-table tbody tr:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    cursor: pointer;
+}
+
+/* Style the cells within the card-row */
+.card-like-table td {
+    padding: 15px 20px;
+}
+/* Apply rounded corners to the first and last cell of each row */
+.card-like-table td:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+.card-like-table td:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    /*text-align: right; /* Often the last cell contains actions or status */
+}
+
+.card-like-table .username {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/*.card-like-table .project-name {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+}
+
+.card-like-table .due-date {
+    font-size: 0.9rem;
+    font-weight: 500;
+}*/

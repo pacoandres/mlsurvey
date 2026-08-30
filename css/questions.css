@@ -1,0 +1,25 @@
+.question {
+    /* Add shadows to create the "card" effect */
+    background-color: #DDDDDD;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.option {
+    /* Add shadows to create the "card" effect */
+    background-color: #DDDDDD;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.question input[type="text"], input[type="password"], input[type="email"], :not[inputmode="numeric"] {
+    width: 75%;
+}
+
+#survey {
+    width: 75%;
+}

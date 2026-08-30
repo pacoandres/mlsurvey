@@ -1,0 +1,37 @@
+# Forbidden directories.
+#<FilesMatch "\.(include|config|views|utils)$$">
+#  Require all denied
+#</FilesMatch>
+# Don't show directory listings for URLs which map to a directory.
+Options -Indexes
+
+# Follow symbolic links in this directory.
+Options +FollowSymLinks
+
+# Make index.php handle any 404 errors.
+ErrorDocument 404 /index.php
+
+# Set the default handler.
+DirectoryIndex index.php
+
+Options -MultiViews
+RewriteEngine On
+#CGIVar REQUEST_URI current-uri
+
+RewriteRule (.+)(include|config|views|utils|ifaces|menu|vendor) index.php[L]
+
+RewriteCond %{REQUEST_URI} !^/js/
+RewriteCond %{REQUEST_URI} !^/css/
+RewriteCond %{REQUEST_URI} !^/fonts/
+RewriteCond %{REQUEST_URI} !^/img/
+RewriteCond %{REQUEST_URI} !^/index\.php
+RewriteRule ^(.*)/?$ /index.php?view=$1 [END]
+
+
+#RewriteCond %{REQUEST_URI} !^/index.php
+#RewriteRule (.*)\.php  /index.php[QSA,L]
+
+#except css, fonts, img, js
+
+php_flag  log_errors On
+php_value error_log log/errors.log

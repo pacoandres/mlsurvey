@@ -1,0 +1,137 @@
+CREATE TABLE Users (
+	userid INT UNSIGNED auto_increment NOT NULL,
+	username TEXT NOT NULL,
+	passwd TEXT NOT NULL,
+	`role` TEXT NULL,
+	CONSTRAINT Users_PK PRIMARY KEY (userid)
+)
+
+CREATE TABLE Surveys (
+	surveyid INT UNSIGNED auto_increment NOT NULL,
+	surveyname TEXT NOT NULL,
+	startdate DATETIME NOT NULL,
+	enddate DATETIME NOT NULL,
+	created DATETIME DEFAULT current_timestamp NOT NULL,
+	CONSTRAINT Surveys_PK PRIMARY KEY (surveyid)
+);
+
+CREATE TABLE Questions (
+	surveyid INT UNSIGNED NOT NULL,
+	questionid INT UNSIGNED NOT NULL,
+	questiondesc TEXT NOT NULL,
+	optional BOOL NULL,
+	multiple BOOL NULL,
+	CONSTRAINT Questions_PK PRIMARY KEY (surveyid,questionid),
+	CONSTRAINT Questions_Surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX Questions_questionid_IDX USING BTREE ON Questions (surveyid,questionid);
+
+CREATE TABLE Options (
+	surveyid INT UNSIGNED NOT NULL,
+	questionid INT UNSIGNED NOT NULL,
+	optionid INT UNSIGNED NOT NULL,
+	optiondesc TEXT NOT NULL,
+	CONSTRAINT Options_pk PRIMARY KEY (surveyid,questionid,optionid),
+	CONSTRAINT Options_Surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT Options_Questions_FK FOREIGN KEY (surveyid,questionid) REFERENCES Questions(surveyid,questionid) ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE INDEX Options_optionid_IDX USING BTREE ON Options (surveyid,questionid,optionid);
+
+CREATE TABLE SystemConfig (
+	configid INT UNSIGNED auto_increment NOT NULL,
+	timezone TEXT NULL,
+	alloweddomains TEXT NULL,
+	emailmethod INT NULL, /*From mlmailer class constants*/
+	emailcmdparams TEXT NULL, /*For sendmail*/
+	emailserver TEXT NULL,
+	emailuser TEXT NULL,
+	emailpasswd TEXT NULL,
+	emailfrom TEXT NULL,
+	emailsecurity TEXT NULL, /*from PHPMailer::ENCRIPTION_* */
+	emailport INT NULL,
+	emaildkim TEXT NULL,
+	CONSTRAINT SystemConfig_PK PRIMARY KEY (configid)
+);
+
+CREATE TABLE Participants (
+	participantid INT UNSIGNED auto_increment NOT NULL,
+	participant CHAR(64) NOT NULL,
+	privatekey TEXT NOT NULL,
+	publickey TEXT NOT NULL,
+	CONSTRAINT Participants_PK PRIMARY KEY (participantid)	
+);
+CREATE INDEX Participants_participant_IDX USING BTREE ON Participants (participant);
+
+CREATE TABLE Participation (
+	Participationid INT UNSIGNED auto_increment NOT NULL,
+	participantid INT UNSIGNED,
+	surveyid INT UNSIGNED,
+	passwd CHAR(64) NOT NULL, /*6 digit code bcrypted*/
+	participationdate DATETIME NOT NULL DEFAULT current_timestamp,
+	CONSTRAINT Participation_PK PRIMARY KEY (participationid),
+	CONSTRAINT Participation_participants_FK FOREIGN KEY (participantid) REFERENCES Participants(participantid) ON DELETE RESTRICT ON UPDATE RESTRICT,
+	CONSTRAINT Participation_surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE RESTRICT ON UPDATE RESTRICT
+);
+CREATE INDEX Participants_participant_survey_IDX USING BTREE ON Participation (participantid, surveyid);
+
+CREATE TABLE Responses (
+	responseid INT UNSIGNED auto_increment NOT NULL,
+	surveyid INT UNSIGNED NOT NULL,
+	participantid INT UNSIGNED NOT NULL,
+	response TEXT NOT NULL, /*array to JSON*/
+	responsesign TEXT NOT NULL, /*ECDSA response signature*/
+	responsedate DATETIME NOT NULL DEFAULT current_timestamp ON UPDATE current_timestamp,
+	CONSTRAINT Responses_PK PRIMARY KEY (responseid),
+	/*Don't allow to delete/modify an ended survey*/
+	CONSTRAINT Responses_Surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE RESTRICT ON UPDATE RESTRICT	
+);
+/*CREATE INDEX Responses_participant_IDX USING BTREE ON Responses (participant);
+CREATE INDEX Responses_survey_date_IDX USING BTREE ON Responses (surveyid, responsedate);*/
+
+CREATE TABLE Results (
+	surveyid INT UNSIGNED NOT NULL,
+	results TEXT NOT NULL, /*A JSON with the results*/
+	resultsdate DATETIME NOT NULL DEFAULT current_timestamp,
+	CONSTRAINT Results_PK PRIMARY KEY (surveyid),
+	CONSTRAINT Results_Surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE RESTRICT ON UPDATE RESTRICT	
+);
+
+DELIMITER $$
+CREATE TRIGGER Responses_no_update
+BEFORE UPDATE ON Responses
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Error: Esta tabla es inmutable. No se permiten modificaciones (UPDATES).';
+END$$
+
+
+CREATE TRIGGER Responses_no_delete
+BEFORE DELETE ON Responses
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Error: Esta tabla es inmutable. No se permiten eliminaciones (DELETES).';
+END$$
+
+CREATE TRIGGER Participants_no_update
+BEFORE UPDATE ON Participants
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Error: Esta tabla es inmutable. No se permiten modificaciones (UPDATES).';
+END$$
+
+
+CREATE TRIGGER Participants_no_delete
+BEFORE DELETE ON Participants
+FOR EACH ROW
+BEGIN
+  SIGNAL SQLSTATE '45000' 
+  SET MESSAGE_TEXT = 'Error: Esta tabla es inmutable. No se permiten eliminaciones (DELETES).';
+END$$
+
+
+
+DELIMITER ;

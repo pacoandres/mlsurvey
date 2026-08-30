@@ -1,0 +1,7 @@
+config/config.php
+composer*
+vendor/
+logs/
+log/
+test/
+img/old/

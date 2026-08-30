@@ -1,0 +1,357 @@
+<?php
+
+require_once 'ifaces/view.php';
+require_once 'utils/dbutils.php';
+require_once 'include/mlmailer.php';
+
+class SystemManage extends View {
+
+    private const MANAGEACTION = 'manageaction';
+
+    function getMenuGroup (){
+        return ML_MENU_GROUP_ADMIN;
+    }
+    
+    function isMulticol (){
+        startSession ();
+        if (isAdmin ())
+            return true;
+
+        return false;
+    }
+
+    function leftMenu (){
+        include 'include/userleftcolumn.php';
+    }
+
+    function show (){
+        if (!isAdmin ()){
+            showMain ();
+            return;
+        }
+        $this->showSystemManage ();
+    }
+
+    private function showSystemManage (){
+        echo ('<div class="col-md-8">');
+        $emailconfig = array ();
+        if (isset($_REQUEST[self::MANAGEACTION])){
+            if ($_REQUEST[self::MANAGEACTION] == "Modificar")
+                $this->modifySystemConfig ();
+        }
+        include 'include/timezones.php';
+        $dbconn = dbConn ();
+        $query = $dbconn->query ("SELECT * from {SystemConfig} LIMIT 1");
+        if ($query->rowCount () < 1){
+            $query->closeCursor ();
+            $dbconn->exec ("INSERT into {SystemConfig} (timezone, alloweddomains) " .
+                "values ('', '')");
+            $query = $dbconn->query ("SELECT * from {SystemConfig} LIMIT 1");
+        }
+        $row = $query->fetch ();
+        $timezonestr = $row['timezone'];
+        $alloweddomains = $row['alloweddomains'];
+        $_SESSION['configid'] = $row['configid'];
+        $emailconfig['emailfrom'] = $row['emailfrom'];
+        $emailconfig['emailmethod'] = $row['emailmethod'];
+        if (is_null ($emailconfig['emailmethod']))
+            $emailconfig['emailmethod'] = 0;
+        
+        $emailconfig['emailcmdparams'] = $row['emailcmdparams'];
+        $emailconfig['emailserver'] = $row['emailserver'];
+        $emailconfig['emailuser'] = $row['emailuser'];
+        $emailconfig['emailpasswd'] = $row['emailpasswd'];
+        $emailconfig['emailsecurity'] = $row['emailsecurity'];
+        $emailconfig['emailport'] = $row['emailport'];
+        
+        $query->closeCursor ();
+        $timezoneindex = -1;
+        if ($timezonestr != ""){
+            $timezoneindex = array_search ($timezonestr, $timezones);
+            if ($timezoneindex === false )
+                $timezoneindex = 0;
+        }
+        ?>
+        <link href="css/select2.css" rel="stylesheet" />
+        <link href="css/button3.css" rel="stylesheet" />
+        <link href="css/questions.css" rel="stylesheet" />
+        <script src="js/select2.js"></script>
+        <script type="text/javascript">
+            function isDomain (domain){
+                regexp = /^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}$/i;
+  
+                if (regexp.test(domain))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            function checkDomains (domains){
+                const domainsarray = domains.split (" ");
+                return domainsarray.every (isDomain);
+            }
+
+            function allowedFields (method){
+                var smtpdiv = document.getElementById ("smtpdiv");
+                var sendmaildiv = document.getElementById ("sendmaildiv");
+                var mailtest = document.getElementById ("mailtest");
+                if (method == <?= MLMailer::SMTP_METHOD ?>){
+                    sendmaildiv.style.display = "none";
+                    smtpdiv.style.display = "block";
+                    mailtest.style.display = "block";
+                }
+                else if (method == <?= MLMailer::SENDMAIL_METHOD ?>){
+                    sendmaildiv.style.display = "block";
+                    smtpdiv.style.display = "none";
+                    mailtest.style.display = "block";
+                }
+                else {
+                    sendmaildiv.style.display = "none";
+                    smtpdiv.style.display = "none";
+                    mailtest.style.display = "none";
+                }
+            }
+
+            function validate_smtp (){
+                var smtpelements = {
+                    "emailserver": "Debes configurar la dirección del servidor SMTP",
+                    "emailuser": "Debes configurar el usuario del servidor SMTP",
+                    "emailpasswd": "Debes configurar la clave de acceso del servidor SMTP",
+                    "emailport": "Debes configurar el puerto de acceso del servidor SMTP",
+                };
+                for (var elementid in smtpelements){
+                    var element = document.getElementById (elementid);
+                    if (element.value == ""){
+                        alert (smtpelements[elementid]);
+                        return false;
+                    }
+                }
+
+                if ($("#emailsecurity").val () == 0 ){
+                    alert ("Debes indicar el mecanismo de cifrado para SMTP.");
+                    $("#emailsecurity").select2 ('open');
+                    return false;
+                }
+                return true;
+            }
+            function validate_config (){
+                if ($("#timezone").val () == 0 ){
+                    alert ("Debes indicar una zona horaria.");
+                    $("#timezone").select2 ('open');
+                    return false;
+                }
+
+                var element = document.getElementById ("alloweddomains");
+                if (!checkDomains (element.value)){
+                    alert ("Los dominios introducidos no son válidos.")
+                    element.focus ({preventScroll: false, focusVisible: true});
+                    return false;
+                }
+
+                var element = document.getElementById ("emailfrom");
+                if (element.value == ""){
+                    alert ("La dirección del remitente no es válida.")
+                    element.focus ({preventScroll: false, focusVisible: true});
+                    return false;
+                }
+
+                var method = $("#emailmethod").val ();
+
+                if (method == <?= MLMailer::SMTP_METHOD ?>){
+                    if (!validate_smtp ())
+                        return false;
+                } 
+                else if (method == <?= MLMailer::SENDMAIL_METHOD ?>){
+                    if (!validate_sendmail ())
+                        return false;
+                }
+                else {
+                    alert ("Debes indicar un método válido para el envío de mensajes.");
+                    $("#emailmethod").select2 ('open');
+                    return false;
+                }
+
+                element = document.getElementById ("sendtest");
+                if (element.checked){
+                    element = document.getElementById ("testrecipient");
+                    if (element.value == ""){
+                        alert ("Para enviar un correo de prueba debes añadir destinatarias.");
+                        element.focus ({preventScroll: false, focusVisible: true});
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            $(document).ready(function() {
+                var selected = <?= $emailconfig['emailmethod']; ?>;
+                $(".searchbox").select2();
+                
+                var $emailmethod = $("#emailmethod");
+                $(".nosearchbox").select2 ({
+                    minimumResultsForSearch: Infinity
+                });
+                $emailmethod.on("change", function(e) {
+                    allowedFields ($emailmethod.val ());
+                });
+
+                if (selected != 0){
+                    $("#emailmethod").val (selected);
+                    $("#emailmethod").trigger('change');
+                }
+
+                const sendtest = document.getElementById('sendtest');
+
+                sendtest.addEventListener('change', (event) => {
+                    const recipient = document.getElementById("testrecipient")
+                    recipient.disabled = !(event.currentTarget.checked);
+                /*if (event.currentTarget.checked) {
+                    recipient.disabled = false;
+                } else {
+                    rece
+                }*/
+                });
+            });
+        </script>
+        <h2>Configuración del sistema.</h2>
+        <form id="systemmanage" name="systemmanage" method="POST" 
+            action="system_manage" onload='prepareTimezones ();'>
+        <div class="question">
+            <p><label for="timezone">Zona horaria:</label>
+            <select id="timezone" name="timezone" class="searchbox"
+                style="width: 40%;">
+                <?php
+                foreach ($timezones as $key => $timezone) {
+                    echo ("<option value=\"{$key}\"");
+                    if ($key != 0 && $key == $timezoneindex)
+                        echo (" selected ");
+                    echo (">{$timezone}</option>" );
+                }
+                ?>
+            </select></p>
+            <p><label for="alloweddomains">Dominios permitidos:</label>
+            <input type="text" id="alloweddomains" name="alloweddomains"
+                value="<?= $alloweddomains; ?>"
+                placeholder="Separados por espacios. Vacío indica sin restricciones."></p>
+            <h4>Configuración de correo</h4>
+            <p><label for="emailfrom">Remitente:</label>
+            <input type="email" name="emailfrom" id="emailfrom" required
+                value="<?= $emailconfig['emailfrom']; ?>"></p>
+            <p><label for="emailmethod">Método:</label>
+            <select name="emailmethod" id="emailmethod" class="nosearchbox"
+                style="width: 25%;">
+                <?php
+                foreach (MLMailer::METHODS as $key => $method) {
+                    echo ("<option value=\"{$key}\">{$method}</option>");
+                }
+                ?>
+            </select></p>
+            <div class="option" id="sendmaildiv" style="display: none;">
+                <p><strong>Recuerda que hay que tener <em>sendmail</em> instalado y configurado 
+                    en el servidor.</strong></p>
+                <!--<p><label for="emailcmdparams">Parámetros:</label>
+                <input type="text" id="emailcmdparams" name="emailcmdparams"
+                value="<?= $emailconfig['emailcmdparams']; ?>">-->
+                </p>
+            </div>
+            <div class="option" id="smtpdiv" style="display: none;">
+                <p><label for="emailserver">Servidor SMTP:</label>
+                <input type="text" id="emailserver" name="emailserver"
+                value="<?= $emailconfig['emailserver']; ?>"></p>
+                <p><label for="emailuser">Usuario:</label>
+                <input type="text" id="emailuser" name="emailuser"
+                value="<?= $emailconfig['emailuser']; ?>"></p>
+                <p><label for="emailpasswd">Clave:</label>
+                <input type="password" id="emailpasswd" name="emailpasswd"
+                value="<?= $emailconfig['emailpasswd']; ?>"></p>
+                <p><label for="emailport">Puerto:</label>
+                <input type="number" id="emailport" name="emailport"
+                value="<?= $emailconfig['emailport']; ?>"></p>
+                <p><label for="emailsecurity">Seguridad SMTP:</label>
+                <select class="nosearchbox" name="emailsecurity" id="emailsecurity"
+                    style="width: 25%;">
+                    <?php
+                    foreach (MLMailer::ENCRYPTION as $key => $value) {
+                        ?>
+                        <option value="<?= $key; ?>" <?= $key == $emailconfig['emailsecurity']?'selected':''; ?>>
+                            <?= $value; ?></option>
+                        <?php
+                    }
+                    ?>
+                </select>
+                </p>
+            </div>
+            <div class="option" id="mailtest" style="display: none;">
+                <p><label for="sendtest">Enviar mensaje de prueba:</label>
+                <input type="checkbox" id="sendtest" name="sendtest"></p>
+                <p><label for="testrecipient">Destinatarias:</label>
+                <input type="email" id="testrecipient" name="testrecipient" disabled
+                placeholder="Separadas por , (comas)" multiple></p>
+            </div>
+        </div>
+        <p><input type="submit" class="button-3" name="<?= self::MANAGEACTION ?>"
+             id="mod" value="Modificar" onclick="return validate_config ();">
+            </p>
+        </form>
+        <?php
+    }
+    private function modifySystemConfig(){
+        include 'include/timezones.php';
+
+        if (!isset ($_SESSION['configid']))
+            return;
+        $cid = $_SESSION['configid'];
+        unset ($_SESSION['configid']);
+        $dbconn = dbConn ();
+        $query = $dbconn->prepare ("UPDATE {SystemConfig} set " .
+            "timezone = :timezone, alloweddomains = :domain, " .
+            "emailfrom = :emailfrom, " .
+            "emailmethod = :emailmethod, " .
+            "emailcmdparams = :emailcmdparams, " .
+            "emailserver = :emailserver, " .
+            "emailuser = :emailuser, " .
+            "emailpasswd = :emailpasswd, " .
+            "emailsecurity = :emailsecurity, " .
+            "emailport = :emailport " .
+            "WHERE configid = :id");
+        $query->bindParam (":id", $cid, PDO::PARAM_INT);
+        $query->bindParam (":timezone", $timezones[$_REQUEST['timezone']],
+            PDO::PARAM_STR);
+        $query->bindParam (":domain", $_REQUEST['alloweddomains'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailfrom", $_REQUEST['emailfrom'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailmethod", $_REQUEST['emailmethod'],
+            PDO::PARAM_INT);
+        $query->bindParam (":emailcmdparams", $_REQUEST['emailcmdparams'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailserver", $_REQUEST['emailserver'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailuser", $_REQUEST['emailuser'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailpasswd", $_REQUEST['emailpasswd'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailsecurity", $_REQUEST['emailsecurity'],
+            PDO::PARAM_STR);
+        $query->bindParam (":emailport", $_REQUEST['emailport'],
+            PDO::PARAM_INT);
+
+        $query->execute ();
+
+        if (isset($_REQUEST["sendtest"])){
+            $mailer = new MLMailer ();
+            try {
+                $mailer->configure ();
+                $mailer->sendTest ($_REQUEST['testrecipient']);
+                echo ("<strong>Mensaje de prueba enviado.</strong>");
+            }
+            catch (Exception $e){
+                echo ("<strong>Error enviando mensaje de prueba.</strong>");
+                logMessage (LOGGER_ERROR, "Error {$e} sending test email.");
+            }
+        }
+    }
+}
