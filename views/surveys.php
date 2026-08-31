@@ -118,6 +118,7 @@ class Surveys extends View {
             return true;
         }
         </script>
+        <form id="resultsesurvey" name="resultsesurvey" method="POST" action="results">
         <div class="card-table-container">
             <table class="card-like-table" id="surveystable">
                 <thead><tr>
@@ -144,6 +145,7 @@ class Surveys extends View {
                     onclick="return validate_query ();" value="Ver resultado">
             </p>
         </div>
+        </form>
         <?php
     }
 }

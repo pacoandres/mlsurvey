@@ -1,0 +1,95 @@
+progress {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 15px;
+    background-color: #fafafa;
+    border-radius: 5px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1) inset;
+    border: 0px;
+    width: 80%;
+}
+
+/*chromium progress box*/
+progress[value]::-webkit-progress-bar {
+    height: 15px;
+    background-color: #fafafa;
+    border-radius: 5px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1) inset;
+    border: 0px;
+    width: 80%;
+}
+
+
+/*Firefox progress bar style*/
+progress.magenta::-moz-progress-bar {
+    background-color: magenta;
+    border-radius: 5px;
+}
+/*Webkit progress bar style*/
+progress.magenta::-webkit-progress-value {
+    background: magenta;
+    border-radius: 5px;
+}
+
+progress.green::-moz-progress-bar {
+    background-color: green;
+    border-radius: 5px;
+}
+progress.green::-webkit-progress-value {
+    background: green;
+    border-radius: 5px;
+}
+
+progress.blue::-moz-progress-bar {
+    background-color: blue;
+    border-radius: 5px;
+}
+progress.blue::-webkit-progress-value {
+    background: blue;
+    border-radius: 5px;
+}
+
+progress.red::-moz-progress-bar {
+    background-color: red;
+    border-radius: 5px;
+}
+progress.red::-webkit-progress-value {
+    background: red;
+    border-radius: 5px;
+}
+
+progress.orange::-moz-progress-bar {
+    background-color: orange;
+    border-radius: 5px;
+}
+progress.orange::-webkit-progress-value {
+    background: orange;
+    border-radius: 5px;
+}
+
+progress.brown::-moz-progress-bar {
+    background-color: brown;
+    border-radius: 5px;
+}
+progress.brown::-webkit-progress-value {
+    background: brown;
+    border-radius: 5px;
+}
+
+progress.greenyellow::-moz-progress-bar {
+    background-color: greenyellow;
+    border-radius: 5px;
+}
+progress.greenyellow::-webkit-progress-value {
+    background: greenyellow;
+    border-radius: 5px;
+}
+
+progress.pink::-moz-progress-bar {
+    background-color: pink;
+    border-radius: 5px;
+}
+progress.pink::-webkit-progress-value {
+    background: pink;
+    border-radius: 5px;
+}
