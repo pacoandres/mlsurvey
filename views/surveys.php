@@ -118,7 +118,7 @@ class Surveys extends View {
             return true;
         }
         </script>
-        <form id="resultsesurvey" name="resultsesurvey" method="POST" action="results">
+        <form id="resultsesurvey" name="resultsesurvey" method="GET" action="results">
         <div class="card-table-container">
             <table class="card-like-table" id="surveystable">
                 <thead><tr>
@@ -141,7 +141,9 @@ class Surveys extends View {
                 </tbody>
             </table>
             <p>
-                <input type="submit" class="button-3" name="<?= self::SURVEY_QUERY; ?>" 
+                <!--<input type="submit" class="button-3" name="<?= self::SURVEY_QUERY; ?>" 
+                    onclick="return validate_query ();" value="Ver resultado">-->
+                <input type="submit" class="button-3"
                     onclick="return validate_query ();" value="Ver resultado">
             </p>
         </div>

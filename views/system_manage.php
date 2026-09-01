@@ -145,12 +145,18 @@ class SystemManage extends View {
                 }
 
                 var element = document.getElementById ("alloweddomains");
-                if (!checkDomains (element.value)){
-                    alert ("Los dominios introducidos no son válidos.")
-                    element.focus ({preventScroll: false, focusVisible: true});
-                    return false;
-                }
-
+                if (element.value.trim () != ""){
+	                if (!checkDomains (element.value)){
+        	            alert ("Los dominios introducidos no son válidos.")
+                	    element.focus ({preventScroll: false, focusVisible: true});
+	                    return false;
+        	        }
+		}
+		else {
+			return window.confirm ("Si no introduces ningún dominio " + 
+				"cualquiera podrá participar en las consultas.\n" +
+				"¿Confirmas que esto es así?");
+		}
                 var element = document.getElementById ("emailfrom");
                 if (element.value == ""){
                     alert ("La dirección del remitente no es válida.")
