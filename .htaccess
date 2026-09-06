@@ -18,8 +18,11 @@ Options -MultiViews
 RewriteEngine On
 #CGIVar REQUEST_URI current-uri
 
+RewriteCond %{REQUEST_URI} !^/vendor/hugerte/hugerte/
 RewriteRule (.+)(include|config|views|utils|ifaces|menu|vendor) index.php[L]
 
+RewriteCond %{REQUEST_URI} !^/vendor/hugerte/hugerte/
+RewriteCond %{REQUEST_URI} !^/files/
 RewriteCond %{REQUEST_URI} !^/js/
 RewriteCond %{REQUEST_URI} !^/css/
 RewriteCond %{REQUEST_URI} !^/fonts/

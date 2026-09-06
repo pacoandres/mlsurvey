@@ -16,6 +16,11 @@ class SurveyManage extends View {
     private const MODIFYACTION = 'modifaction';
     private const DELACTION = 'delaction';
 
+    function addHead (){
+        ?>
+        <script type="text/javascript" src="vendor/hugerte/hugerte/hugerte.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+        <?php
+    }
     function getMenuGroup (){
         return ML_MENU_GROUP_SURVEYS;
     }    
@@ -244,7 +249,7 @@ onload='document.getElementById("survey").focus();'>
         ?>
         <script type="text/javascript">
             var questions = 0;
-
+                
         function validate_question (id){
             /*var e = document.getElementById ("name-q-" + id);
             if (e == null)
@@ -255,8 +260,9 @@ onload='document.getElementById("survey").focus();'>
                 e.focus ({preventScroll: false, focusVisible: true});
                 return false;
             }*/
-            var e = document.getElementById ("desc-q-" + id);
-            if (e.value == ""){
+            //var e = document.getElementById ("desc-q-" + id);
+            var e = hugerte.get("desc-q-" + id);
+            if (e.getContent () == ""){
                 alert ("La descripcióm de la pregunta " + id + 
                 " no puede estar vacío.");
                 e.focus ({preventScroll: false, focusVisible: true});
@@ -324,6 +330,18 @@ onload='document.getElementById("survey").focus();'>
             }
             return true;
         }
+
+        $(document).ready(function() {
+            hugerte.init({
+                selector: '.description',
+                language: 'es',
+		plugins: 'link autolink lists',
+		toolbar: 'undo redo | styles | bold italic | link | indent outdent | bullist numlist',
+                menubar: false,
+                license_key: 'gpl' // gpl for open source, T8LK:... for commercial
+            });
+        });
+
         </script>
         <?php
         $this->insertQuestionsCode ();
@@ -420,7 +438,7 @@ onload='document.getElementById("survey").focus();'>
             <!--<p><label id="label-name-q-{qid}" for="name-q-{qid}">Título:</label>
                 <input type="text" id="name-q-{qid}" name="name-q-{qid}"></p>-->
             <p><label id="label-desc-q-{qid}" for="desc-q-{qid}">Descripción:</label>
-                <textarea class="form-control" name="desc-q-{qid}" id="desc-q-{qid}"></textarea></p>
+                <textarea class="description" name="desc-q-{qid}" id="desc-q-{qid}"></textarea></p>
             <p><label id="label-opt-q-{qid}" for="opt-q-{qid}">Opcional:</label>
                 <input type="checkbox" name="opt-q-{qid}" id="opt-q-{qid}">
                 <label id="label-mul-q-{qid}" for="mul-q-{qid}">Multiple:</label><input type="checkbox" 
@@ -446,6 +464,14 @@ onload='document.getElementById("survey").focus();'>
             newquestion = newquestionhtml.replace (/{qid}/g, nextquestionid);
             let position = document.getElementById ("q-" + questionid);
             position.insertAdjacentHTML("afterend", newquestion);
+            const newed = new hugerte.Editor('desc-q-' + nextquestionid, {
+                    license_key: 'gpl',
+                    language: 'es'
+		    plugins: 'link autolink lists',
+		    toolbar: 'undo redo | styles | bold italic | link | indent outdent | bullist numlist',
+		    menubar: false,
+                }, hugerte.EditorManager);
+            newed.render ();
         }
 
 
@@ -551,7 +577,7 @@ onload='document.getElementById("survey").focus();'>
             <!--<p><label id="label-name-q-1" for="name-q-1">Título:</label>
                 <input type="text" id="name-q-1" name="name-q-1"></p>-->
             <p><label id="label-desc-q-1" for="desc-q-1">Descripción:</label>
-                <textarea class="form-control" name="desc-q-1" id="desc-q-1"></textarea></p>
+                <textarea class="description" name="desc-q-1" id="desc-q-1"></textarea></p>
             <p><label id="label-opt-q-1" for="opt-q-1">Opcional:</label>
                 <input type="checkbox" name="opt-q-1" id="opt-q-1">
                 <label id="label-mul-q-1" for="mul-q-1">Multiple:</label><input type="checkbox" name="mul-q-1"
@@ -737,7 +763,7 @@ onload='document.getElementById("survey").focus();'>
                 <input type="text" id="name-q-<?= $qid; ?>" name="name-q-<?= $qid; ?>"
                 value=""></p>-->
             <p><label id="label-desc-q-<?= $qid; ?>" for="desc-q-<?= $qid; ?>">Descripción:</label>
-                <textarea class="form-control" name="desc-q-<?= $qid; ?>" id="desc-q-<?= $qid; ?>"><?= $question['questiondesc']; ?></textarea></p>
+                <textarea class="description" name="desc-q-<?= $qid; ?>" id="desc-q-<?= $qid; ?>"><?= $question['questiondesc']; ?></textarea></p>
             <p><label id="label-opt-q-<?= $qid; ?>" for="opt-q-<?= $qid; ?>">Opcional:</label>
                 <input type="checkbox" name="opt-q-<?= $qid; ?>" id="opt-q-<?= $qid; ?>" 
                 <?= $opt; ?>>

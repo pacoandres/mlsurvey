@@ -58,11 +58,13 @@ if ($classview != 'MainView' && file_exists ($classviewfile)){
 <!--<link href="js/owl-carousel/owl.carousel.css" rel="stylesheet">-->
 <link href="css/style.css" rel="stylesheet" />
 <script src="js/jquery.js"></script> 
+<?php
+$view->addHead ();
+?>
 <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
 <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-
 </head>
 <body>
 <div id="wrapper">

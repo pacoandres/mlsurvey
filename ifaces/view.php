@@ -30,6 +30,10 @@ abstract class View
         return;
     }
 
+    public function addHead (){
+        return;
+    }
+
 }
 function isView ($viewobject){
     if ($viewobject instanceof View){

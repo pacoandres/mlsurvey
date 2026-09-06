@@ -5,3 +5,5 @@ logs/
 log/
 test/
 img/old/
+files/
+views/filetest.php

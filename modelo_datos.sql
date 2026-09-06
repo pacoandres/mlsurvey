@@ -21,6 +21,7 @@ CREATE TABLE Questions (
 	questiondesc TEXT NOT NULL,
 	optional BOOL NULL,
 	multiple BOOL NULL,
+        file VARCHAR(256) NULL,
 	CONSTRAINT Questions_PK PRIMARY KEY (surveyid,questionid),
 	CONSTRAINT Questions_Surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE CASCADE ON UPDATE CASCADE
 );

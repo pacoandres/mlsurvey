@@ -168,7 +168,7 @@ class Participate extends View {
 
         <div class="question">
             <h3>Pregunta <?= $question['questionid'] ?></h3>
-            <p><em><b><?= $question['questiondesc'] ?></b></em></p>
+            <div><?= $question['questiondesc'] ?><div>
             <?php
             $multiple = $question['multiple'];
             $optional = $question['optional'];
