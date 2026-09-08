@@ -12,5 +12,13 @@ $db_port=3306;
 //If database shared with others and use a table preffix.
 $db_prefix='';
 
+
+/**
+ * Needed sometimes if behind a reverse proxy or with some location configurations.
+ * No need to change if the emails are sended with the correct URL 
+ */
+$proxy_path="";
+
+
 //In production should be 0.
 $log_level=3; //0: error, 1: warn, 2: info, 3: debug.

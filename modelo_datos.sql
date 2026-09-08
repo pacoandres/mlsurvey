@@ -9,6 +9,8 @@ CREATE TABLE Users (
 CREATE TABLE Surveys (
 	surveyid INT UNSIGNED auto_increment NOT NULL,
 	surveyname TEXT NOT NULL,
+	surveydesc TEXT NOT NULL,
+	surveyfile TEXT NULL,
 	startdate DATETIME NOT NULL,
 	enddate DATETIME NOT NULL,
 	created DATETIME DEFAULT current_timestamp NOT NULL,
@@ -65,13 +67,12 @@ CREATE TABLE Participants (
 CREATE INDEX Participants_participant_IDX USING BTREE ON Participants (participant);
 
 CREATE TABLE Participation (
-	Participationid INT UNSIGNED auto_increment NOT NULL,
-	participantid INT UNSIGNED,
+	participationid INT UNSIGNED auto_increment NOT NULL,
 	surveyid INT UNSIGNED,
-	passwd CHAR(64) NOT NULL, /*6 digit code bcrypted*/
+	participationkey VARCHAR(256) NOT NULL,
+	participant TEXT NOT NULL,
 	participationdate DATETIME NOT NULL DEFAULT current_timestamp,
 	CONSTRAINT Participation_PK PRIMARY KEY (participationid),
-	CONSTRAINT Participation_participants_FK FOREIGN KEY (participantid) REFERENCES Participants(participantid) ON DELETE RESTRICT ON UPDATE RESTRICT,
 	CONSTRAINT Participation_surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 CREATE INDEX Participants_participant_survey_IDX USING BTREE ON Participation (participantid, surveyid);

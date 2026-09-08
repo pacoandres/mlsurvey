@@ -5,6 +5,8 @@ require_once 'views/surveys.php';
 require_once 'include/mlmailer.php';
 require_once 'utils/participation.php';
 require_once 'utils/token.php';
+require_once 'utils/showsurvey.php';
+require_once 'utils/crypt.php';
 
 class GetCode extends View {
 
@@ -17,6 +19,7 @@ class GetCode extends View {
     public function loadStyles (){
         ?>
         <link href="css/button3.css" rel="stylesheet" />
+        <link href="css/questions.css" rel="stylesheet" />
         <?php
     }
 
@@ -49,9 +52,10 @@ class GetCode extends View {
                 return;
             }
             $row = $survey->fetch ();
-            echo ("<h2>Obteniendo código para la consulta <em>{$row['surveyname']}</em>.</h2>");
+            //echo ("<h2>Obteniendo código para la consulta <em>{$row['surveyname']}</em>.</h2>");
             $_SESSION['surveyname'] = $row['surveyname'];
             $survey->closeCursor ();
+            showTheSurvey ($db, $_SESSION['surveyid'], true);
         }
         catch (Exception $e){
             removeToken ();
@@ -114,31 +118,31 @@ class GetCode extends View {
                 $participantid = $participant['participantid'];
             }
             $participants->closeCursor ();
-            if (hasCode ($db, $participantid, $surveyid)){
+            /*if (hasCode ($db, $participantid, $surveyid)){ //Echar un vistazo
                 //Needs a time limit.
                 echo ("<p><strong>La dirección de correo indicada ya ha solicitado un código para esta consulta</strong></p>");
                 return;
-            }
+            }*/
             if (hasParticipated ($db, $participantid, $surveyid)){
                 echo ("<p><strong>La dirección de correo indicada ya ha participado en esta consulta.</strong></p>");
                 return;
             }
 
-            $code = "";
-            for ($i = 0; $i < 6; $i++){
-                $code .= rand (0, 9);
-            }
-            $mailer = new MlMailer ();
-            $mailer->configure ();
-            $mailer->sendCode ($email, $code, $surveyname);
+            $code = random_bytes (32);
+            
 
-            $passwd = password_hash ($code, PASSWORD_BCRYPT);
-            $query = $db->prepare ("INSERT into {Participation} (participantid, surveyid, passwd) " .
+            $passwd = hash ('sha256', $code);
+            $participant = base64_encode (encrypt ($email, $code));
+            $query = $db->prepare ("INSERT into {Participation} (participant, surveyid, participationkey) " .
                 "values (:id, :sid, :pwd)");
-            $query->bindParam (":id", $participantid, PDO::PARAM_INT);
+            $query->bindParam (":id", $participant, PDO::PARAM_STR);
             $query->bindParam (":sid", $surveyid, PDO::PARAM_INT);
             $query->bindParam (":pwd", $passwd, PDO::PARAM_STR);
             $query->execute ();
+            $pid = $db->lastInsertId ();
+            $mailer = new MlMailer ();
+            $mailer->configure ();
+            $mailer->sendCode ($email, $pid, url_base64_encode ($code), $surveyname);
             echo ("<p><strong>El código para participar en la consulta <em>{$surveyname}</em> " . 
                 "ha sido enviado a la dirección indicada.</strong></p>");
         }
@@ -163,7 +167,7 @@ class GetCode extends View {
             if ($emaildomain == $domain)
                 return true;
         }
-        echo ("<p><strong>La dirección de correo no es de un dominio autorizado.</strong></p>");
+        echo ("<p><strong>La dirección de correo proporcionada no es de un dominio autorizado.</strong></p>");
         return false;
     }
 }

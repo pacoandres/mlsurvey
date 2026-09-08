@@ -4,6 +4,7 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 require_once 'vendor/autoload.php'; //For PHPMailer as installed via composer.
 require_once 'utils/dbutils.php';
+require_once 'utils/host.php';
 
 class MLMailer extends PHPMailer {
     public const NO_METHOD = 0;
@@ -85,11 +86,12 @@ class MLMailer extends PHPMailer {
         }
     }
 
-    public function sendCode ($recipient, $code, $surveyname){
+    public function sendCode ($recipient, $pid, $code, $surveyname){
+        $theurl = getURL () . "/participate?pid=" . $pid . "&auth=" . $code;
         $this->setFrom ($this->m_from);
         $this->addAddress ($recipient);
-        $this->Subject = "Código para opinar en la consulta {$surveyname}";
-        $this->Body = "El código para opinar en la consulta {$surveyname} es:\n{$code}";
+        $this->Subject = "Dirección para opinar en la consulta {$surveyname}";
+        $this->Body = "La dirección para opinar en la consulta {$surveyname} es:\n{$theurl}";
         if (!$this->send ()){
             throw new Exception("Error {$this->ErrorInfo} sending code email.");
         }

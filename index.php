@@ -138,7 +138,7 @@ $view->addHead ();
 					<strong>Por ejemplo eso</strong>
 					</address>
 					<p>
-						<i class="icon-envelope-alt"></i> menoslectivas@dominio.org
+						<i class="icon-envelope-alt"></i> administradora@dominio.org
 					</p>
 				</div>
 			</div>

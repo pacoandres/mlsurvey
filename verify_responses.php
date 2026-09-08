@@ -3,7 +3,9 @@ require_once 'config/config.php';
 require_once 'utils/dbutils.php';
 require_once 'utils/participation.php';
 
+$checked = 0;
 $badsignatures = 0;
+$usererrors = 0;
 if ($argc < 2){
     echo "Sintaxis: verify_responses.php surveyid\n";
     return 1;
@@ -18,6 +20,7 @@ $responses->bindParam (":sid", $surveyid, PDO::PARAM_INT);
 $responses->execute ();
 
 while ($response = $responses->fetch ()){
+    $checked++;
     $responseid = $response['responseid'];
     $participantid = $response['participantid'];
     $res = $response['response'];
@@ -29,6 +32,7 @@ while ($response = $responses->fetch ()){
     if ($participants->rowCount () == 0){
         echo ("Participant {$participantid} does not exist.\n");
         $participants->closeCursor ();
+        $usererrors++;
         continue;
     }
     $pubkey = $participants->fetch ()['publickey'];
@@ -40,4 +44,5 @@ while ($response = $responses->fetch ()){
     }
 }
 $responses->closeCursor ();
-echo ("All signatures have been checked with {$badsignatures} bad signatures.\n");
+echo ("All ({$checked}) responses have been checked with {$badsignatures} bad signatures " . 
+    "and {$usererrors} non existent users\n");

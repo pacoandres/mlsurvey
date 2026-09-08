@@ -6,4 +6,4 @@ log/
 test/
 img/old/
 files/
-views/filetest.php
+views/test*

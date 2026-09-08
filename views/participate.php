@@ -5,15 +5,21 @@ require_once 'views/response_survey.php';
 require_once 'utils/participation.php';
 require_once 'utils/token.php';
 require_once 'utils/crypt.php';
+require_once 'include/fileparams.php';
+require_once 'utils/showsurvey.php';
 
 class Participate extends View {
     public const ACTION = "Enviar";
+    public const PID = "pid";
+    public const KEY = "auth";
 
     //This const should be remove in non alpha versions.
     private const TESTID = 0;
 
     private const COOKIE_KEY ="lacookie";
     private $key = "";
+    private string $email = "";
+    private int $surveyid = -1;
     function doInit (){
         startSession ();
         $this->key = random_bytes (32);
@@ -39,36 +45,36 @@ class Participate extends View {
             return;
         }
 
-        if (!isset ($_REQUEST[ResponseSurvey::ACTION])){
+        if (!isset ($_REQUEST[self::PID]) || !isset ($_REQUEST[self::KEY])){
             showMain ();
             return;
         }
-        if (!checkToken ()){
-            tokenError ();
-            return;
-        }
+        
 
-        $surveyid = $_SESSION['surveyid'];
-        $email = $_REQUEST['email'];
-        $code = $_REQUEST['code'];
+        $pid = $_REQUEST[self::PID];
+        $key = $_REQUEST[self::KEY];
         clearSessionVariables ();
-        unset ($_REQUEST['email']);
-        unset ($_REQUEST['code']);
+        
 
-        $hashmail = hash ('sha256', $email);
+        $code = url_base64_decode ($key);
 
         try {
             $db = dbConn ();
+            
+            if (!$this->getEmail ($db, $pid, $code)){
+                echo ("<p><em>La solicitud proporcionada no existe o ha caducado.</em></p>");
+                return;
+            }
             //This block should be removed in non alpha versions
-            if ($email == "prueba@mierda.cow" && $code = "123456"){
+            /*if ($email == "prueba@mierda.cow" && $code = "123456"){
                 $_SESSION['privkey'] = "no";
                 $_SESSION['surveyid'] = $surveyid;
                 $_SESSION['participantid'] = self::TESTID;
                 $this->showSurvey ($db, $surveyid);
                 return;
-            }
+            }*/
 
-
+            $hashmail = hash ('sha256', $this->email);
             $participants = $db->prepare ("SELECT participantid, privatekey " .
                 "FROM {Participants} WHERE participant = :part");
             $participants->bindParam (":part", $hashmail, PDO::PARAM_STR);
@@ -81,7 +87,7 @@ class Participate extends View {
             $participantid = $participant["participantid"];
             $privatekeycryp = $participant['privatekey'];
             $participants->closeCursor ();
-            if (hasParticipated ($db, $participantid, $surveyid)){
+            if (hasParticipated ($db, $participantid, $this->surveyid)){
                 ?>
                 <p><strong>Ya se ha participado en la consulta desde la dirección de correo
                     indicada.
@@ -89,10 +95,10 @@ class Participate extends View {
                 <?php
                 return;
             }
-            $codes = $db->prepare ("SELECT passwd FROM {Participation} WHERE " .
+            /*$codes = $db->prepare ("SELECT passwd FROM {Participation} WHERE " .
                 "participantid = :pid AND surveyid = :sid");
             $codes->bindParam (":pid", $participantid, PDO::PARAM_INT);
-            $codes->bindParam (":sid", $surveyid, PDO::PARAM_INT);
+            $codes->bindParam (":sid", $this->surveyid, PDO::PARAM_INT);
             $codes->execute ();
             if ($codes->rowCount () == 0){
                 ?>
@@ -106,8 +112,8 @@ class Participate extends View {
             if (!password_verify ($code, $codecrypted)){
                 $this->securityError ();
                 return;
-            }
-            $key = openssl_pkey_get_private ($privatekeycryp, $email);
+            }*/
+            $key = openssl_pkey_get_private ($privatekeycryp, $this->email);
             if ($key === false){
                 ?>
                 <strong><p>La dirección de correo indicada tiene un problema de seguridad.</p>
@@ -117,9 +123,9 @@ class Participate extends View {
             }
             openssl_pkey_export($key, $priv);
             $_SESSION['privkey'] = encrypt ($priv, $this->key);
-            $_SESSION['surveyid'] = $surveyid;
+            $_SESSION['surveyid'] = $this->surveyid;
             $_SESSION['participantid'] = $participantid;
-            $this->showSurvey ($db, $surveyid, $participantid);
+            $this->showSurvey ($db, $this->surveyid, $participantid);
         }
         catch (Exception $e){
             echo ("<p><strong>Error recuperando los datos para la participación</strong></p>");
@@ -137,82 +143,8 @@ class Participate extends View {
     }
 
     private function showSurvey ($db, $surveyid){
-        $query = $db->prepare ("SELECT surveyname FROM {Surveys} where surveyid = :sid");
-        $query->bindParam (":sid", $surveyid, PDO::PARAM_INT);
-        $query->execute ();
-        if ($query->rowCount () == 0){
-            ?>
-            <p><strong>No se encuentra la consulta seleccionada</strong></p>
-            <?
-            return;
-        }
-        $survey = $query->fetch ();
-        ?>
-        <h2>Participando en la consulta <em><?= $survey['surveyname'] ?></em></h2>
-        <form name="participate" id="participate" action="participate" method="POST">
-        <?php
-        $query->closeCursor ();
-        echo (setTokenHTML ());
-        $questions = $db->prepare ("SELECT * FROM {Questions} WHERE surveyid = :sid");
-        $questions->bindParam (":sid", $surveyid, PDO::PARAM_INT);
-        $questions->execute ();
-        if ($questions->rowCount () == 0){ //This should not happen
-            echo ("<p><strong>No hay preguntas para esta consulta.</strong></p>");
-            logMessage (LOGGER_ERROR, "No questions for survey {$surveyid}");
-            return;
-        }
-        echo ("<input type='hidden' name='totalquestions' id='totalquestions' value='" . $questions->rowCount () . "'>");
-        while ($question = $questions->fetch ()){
-            $questionid = $question['questionid'];
-        ?>
-
-        <div class="question">
-            <h3>Pregunta <?= $question['questionid'] ?></h3>
-            <div><?= $question['questiondesc'] ?><div>
-            <?php
-            $multiple = $question['multiple'];
-            $optional = $question['optional'];
-            $options = $db->prepare ("SELECT * FROM {Options} WHERE surveyid = :sid " .
-                "AND questionid = :qid");
-            $options->bindParam (":sid", $surveyid, PDO::PARAM_INT);
-            $options->bindParam (":qid", $questionid, PDO::PARAM_INT);
-            $options->execute ();
-            if ($options->rowCount () == 0){ //Should not happen
-                echo ("<p><strong>No hay opciones para esta pregunta.</strong></p>");
-                logMessage (LOGGER_ERROR, "No options for survey {$surveyid}-{$questionid}");
-                $options->closeCursor ();
-                continue;
-            }
-            if ($optional != 1){
-                echo ("<p style='color: red;'><strong>Obligatoria</strong></p>");
-            }
-            ?>
-            <div class="option">
-                <input type="hidden" name="multiple-<?= $questionid; ?>" value="<?= $multiple; ?>">
-                <input type="hidden" name="optional-<?= $questionid; ?>" value="<?= $optional; ?>">
-                <input type="hidden" name="topt-<?= $questionid ?>" id="topt-<?= $questionid ?>" value="<?= $options->rowCount (); ?>">
-                <?php
-                while ($option = $options->fetch ()){
-                    $optionid = $option['optionid'];
-                    $optiondesc = $option['optiondesc'];
-                    if ($multiple){
-                        $cname = "op-" . $questionid . "-" . $optionid;
-                        echo ("<p><input type='checkbox' id='{$cname}' name='{$cname}' " .
-                            "><label for='{$cname}'>{$optiondesc}</label></p>");
-                    }
-                    else {
-                        $rname = "op-" . $questionid;
-                        $rid = "op-" . $questionid . "-" . $optionid;
-                        echo ("<p><input type='radio' id='{$rid}' name='{$rname}' " .
-                            "value='{$optionid}'><label for='{$rid}'>{$optiondesc}</label></p>");
-                    }
-                }
-                $options->closeCursor ();
-                ?>
-            </div>
-        </div>
-        <?php
-        }
+        echo ('<form name="participate" id="participate" action="participate" method="POST">');
+        showTheSurvey ($db, $surveyid);
         ?>
         <p><input type="submit" class="button-3" name="<?= self::ACTION; ?>" 
             value="<?= self::ACTION ?>"></p>
@@ -347,5 +279,20 @@ class Participate extends View {
             return "";
         }
         return base64_encode ($sign);
+    }
+
+    private function getEmail ($db, $pid, $code){
+        $hcode = hash ('sha256', $code);
+        $query = $db->prepare ("SELECT surveyid, participant FROM {Participation} " . 
+            "WHERE participationid = :pid AND participationkey = :pk");
+        $query->bindParam (":pid", $pid, PDO::PARAM_INT);
+        $query->bindParam (":pk", $hcode, PDO::PARAM_STR);
+        $query->execute ();
+        if ($query->rowCount () == 0)
+            return false;
+        $row = $query->fetch ();
+        $this->email = decrypt (base64_decode ($row['participant']), $code);
+        $this->surveyid = $row['surveyid'];
+        return true;
     }
 }

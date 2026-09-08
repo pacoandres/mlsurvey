@@ -1,6 +1,7 @@
 <?php
 require_once 'ifaces/view.php';
 require_once 'utils/user.php';
+requere_once 'include/fileparams.php';
 
 enum SurveyJavascript {
         case NoJavascript;
@@ -15,7 +16,10 @@ class SurveyManage extends View {
     private const ADDACTION = 'addaction';
     private const MODIFYACTION = 'modifaction';
     private const DELACTION = 'delaction';
-
+    private bool $havefile = false;
+    private string $filename = "";
+    private string $fileerror = "";
+    private int $fileid = 0;
     function addHead (){
         ?>
         <script type="text/javascript" src="vendor/hugerte/hugerte/hugerte.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
@@ -88,7 +92,7 @@ class SurveyManage extends View {
         <div class="col-md-8">
         <h2>Gestión de consultas</h2>
         <form id="surveymanage" name="surveymanage" method="POST" 
-            action="survey_manage" >
+            action="survey_manage">
         <?php
         $this->listSurveys ();
         $this->showControls ();
@@ -206,6 +210,30 @@ class SurveyManage extends View {
         <link href="css/tablecard.css" rel="stylesheet" />
         <link href="css/button3.css" rel="stylesheet" />
         <link href="css/questions.css" rel="stylesheet" />
+        <style>
+            .drop-zone {
+                display: block;
+                width: 75%;
+                padding: 1em;
+                border-radius: 4px;
+                color: slategray;
+                cursor: pointer;
+            }
+            .dragidle {
+                border: 1px solid #cccccc;
+            }
+            .dragging {
+                border: 2px dashed #1abc9c;
+            }
+
+            .survey-file {
+                display: none !important;
+            }
+
+            #filename {
+                cursor: pointer;
+            }
+        </style>
         <?php
     }
 
@@ -216,9 +244,24 @@ class SurveyManage extends View {
     <div class="col-md-8">
     <h2>Añadir consulta</h2>
         <form id="addsurvey" name="addsurvey" method="POST" action="survey_manage" 
-onload='document.getElementById("survey").focus();'>
+onload='document.getElementById("survey").focus();' enctype="multipart/form-data">
         <p><label for="survey">Consulta:</label>
             <input type="text" id="survey" name="survey" tabindex="-1"></p>
+        <p><label for="surveydesc">Descripción</label>
+        <textarea class="description" name="surveydesc" id="surveydesc"></textarea>
+        </p>
+        <label id="drop-zone" class="drop-zone dragidle">
+        <div id="text-file">Añadir documentación en PDF. Pulsa o arrastra el archivo aquí.</div>
+            <input type="file" id="file-input" accept="application/pdf" name="file-input"
+            class="survey-file"/>
+            <div id="filediv" style="display: none;">
+                <input type="text" name="filename" id="filename" readonly onclick="downloadFile ();">
+                <button type="button" id="del-file" class="button-3" 
+                        onclick="delfile ();">
+                        <img src="img/del.svg" />
+                </button>
+            </div>
+        </label>
         <p><label for="startdate">Inicio:</label>
             <input type="datetime-local" id="startdate" name="startdate"></p>
         <p><label for="enddate">Fin:</label>
@@ -251,16 +294,6 @@ onload='document.getElementById("survey").focus();'>
             var questions = 0;
                 
         function validate_question (id){
-            /*var e = document.getElementById ("name-q-" + id);
-            if (e == null)
-                return true;
-            if (e.value == ""){
-                alert ("El nombre de la pregunta " + id + 
-                " no puede estar vacío.");
-                e.focus ({preventScroll: false, focusVisible: true});
-                return false;
-            }*/
-            //var e = document.getElementById ("desc-q-" + id);
             var e = hugerte.get("desc-q-" + id);
             if (e.getContent () == ""){
                 alert ("La descripcióm de la pregunta " + id + 
@@ -291,12 +324,18 @@ onload='document.getElementById("survey").focus();'>
             const startdate = new Date (start.value);
             const enddate = new Date (end.value);
             const today = new Date ();
-            //const todaystring = today.toISOString ().substring (0,19);
-            
+            const desc = hugerte.get("surveydesc");
+           
             
             if (survey.value == ""){
                 alert ("El nombre de la consulta no puede estar vacío");
                 survey.focus ({preventScroll: false, focusVisible: true});
+                return false;
+            }
+
+            if (desc.getContent () == ""){
+                alert ("La descripción de la consulta no puede estar vacía.");
+                desc.focus ({preventScroll: false, focusVisible: true});
                 return false;
             }
 
@@ -346,8 +385,112 @@ onload='document.getElementById("survey").focus();'>
         <?php
         $this->insertQuestionsCode ();
         $this->insertOptionsCode();
+        $this->insertFileCode ();
     }
 
+    private function insertFileCode (){
+        ?>
+        <script type="text/javascript">
+            function showFile (filename){
+                const filediv = document.getElementById ("filediv");
+                const filetext = document.getElementById ("filename");
+                const textfile = document.getElementById ("text-file");
+                filetext.value = filename;
+                filediv.style.display = "block";
+                textfile.style.display = "none";
+            }
+            function getDroppedFiles (e){
+                const fileItems = [...e.dataTransfer.items].filter(
+                    (item) => item.kind === "file",
+                );
+                if (fileItems.length > 0){
+                    e.preventDefault ();
+                    if (fileItems.length > 1){
+                        alert ("Solo se admite un archivo.")
+                        return;
+                    }
+                    fileItems.forEach ((item, i) => {
+                        if (item.kind === "file") {
+                            if (item.type != "application/pdf"){
+                                alert ("El archivo no está en formato PDF.")
+                                return;
+                            }
+                            const file = item.getAsFile();
+                            const fileInput = document.getElementById ("file-input");
+                            const dt = new DataTransfer ();
+                            dt.items.add (file);
+                            fileInput.files = dt.files;
+                            showFile (file.name);
+                        }
+                    });
+                }
+            }
+
+            function delfile (){
+                const fileInput = document.getElementById ("file-input");
+                const dt = new DataTransfer ();
+                fileInput.files = dt.files;
+                const filediv = document.getElementById ("filediv");
+                const filetext = document.getElementById ("filename");
+                const textfile = document.getElementById ("text-file");
+                filetext.value = "";
+                filediv.style.display = "none";
+                textfile.style.display = "block"
+            }
+            function addFile (filename){
+                const file = new File (["<?= FileParams::NO_FILE_CHANGE; ?>"], filename);
+                const fileInput = document.getElementById ("file-input");
+                const dt = new DataTransfer ();
+                dt.items.add (file);
+                fileInput.files = dt.files;
+                showFile (file.name);
+            }
+
+            
+            $(document).ready(function() {
+                const dropZone = document.getElementById("drop-zone");
+                dropZone.addEventListener("drop", (e) => {
+                    e.preventDefault ();
+                    getDroppedFiles (e);
+                    dropZone.classList.remove ("dragging");
+                    dropZone.classList.add ("dragidle");
+                });
+                dropZone.addEventListener("dragover", (e) => {
+                    e.preventDefault ();
+                    //Change class to enlight
+                    const fileItems = [...e.dataTransfer.items].filter(
+                        (item) => item.kind === "file",
+                    );
+                    if (fileItems.length > 0){
+                        dropZone.classList.remove ("dragidle");
+                        dropZone.classList.add ("dragging");
+                    }       
+                });
+                dropZone.addEventListener("dragleave", (e) => {
+                    e.preventDefault ();
+                    const fileItems = [...e.dataTransfer.items].filter(
+                        (item) => item.kind === "file",
+                    );
+                    if (fileItems.length > 0){
+                        //Change class to enlight
+                        dropZone.classList.add ("dragidle");
+                        dropZone.classList.remove ("dragging");
+                    }
+                });
+                <?=  $this->havefile ? "addFile ('{$this->filename}');" : ""?>
+            })
+
+            function downloadFile(){
+                <?php
+                    if ($this->havefile){
+                        $downloadfile = FileParams::FILE_DIR . $this->fileid . "/" . $this->filename;
+                        echo ("window.open ('{$downloadfile}', '_self');");
+                    }
+                ?>
+            }
+        </script>
+        <?php
+    }
     private function insertQuestionsCode (){
         ?>
         <script type="text/javascript">
@@ -466,11 +609,10 @@ onload='document.getElementById("survey").focus();'>
             position.insertAdjacentHTML("afterend", newquestion);
             const newed = new hugerte.Editor('desc-q-' + nextquestionid, {
                     license_key: 'gpl',
-                    language: 'es'
+                    language: 'es',
 		    plugins: 'link autolink lists',
 		    toolbar: 'undo redo | styles | bold italic | link | indent outdent | bullist numlist',
-		    menubar: false,
-                }, hugerte.EditorManager);
+		    menubar: false}, hugerte.EditorManager);
             newed.render ();
         }
 
@@ -607,6 +749,7 @@ onload='document.getElementById("survey").focus();'>
         $surveyname = $_REQUEST['survey'];
         $startstring = $_REQUEST['startdate'];
         $endstring = $_REQUEST['enddate'];
+        $surveydesc = $_REQUEST['surveydesc'];
         $nquestion = 1;
         $noption = 1;
         $questions = array();
@@ -628,15 +771,25 @@ onload='document.getElementById("survey").focus();'>
             $nquestion++;
         }
         
+        
+        $filename = $this->saveFile (session_id ());
         try {
             $dbconn = dbConn ();
             $dbconn->beginTransaction ();
             try {
                 $query = $dbconn->prepare ("INSERT into {Surveys} " . 
-                    "(surveyname, startdate, enddate) values (:name, :start, :end)");
+                    "(surveyname, surveydesc, surveyfile, startdate, enddate) " .
+                    "values (:name, :desc, :file, :start, :end)");
                 $query->bindParam (":name", $surveyname, PDO::PARAM_STR);
                 $query->bindParam (":start", $startstring, PDO::PARAM_STR);
                 $query->bindParam (":end", $endstring, PDO::PARAM_STR);
+                $query->bindParam (":desc", $surveydesc, PDO::PARAM_STR);
+                if (is_string ($filename)){
+                    $query->bindParam (":file", $filename, PDO::PARAM_STR);
+                }
+                else {
+                    $query->bindParam (":file", "", PDO::PARAM_STR);
+                }
                 $query->execute ();
                 $sid = $dbconn->lastInsertId ();
                 $this->insertQuestions ($dbconn, $sid, $questions);
@@ -645,12 +798,16 @@ onload='document.getElementById("survey").focus();'>
             catch (Exception $e){
                 $dbconn->rollBack ();
                 throw $e;
-                
             }
         }
         catch (Exception $e){
-            echo ("<strong>Error creando la consulta.</strong>");
+            echo ("<p><strong>Error creando la consulta.</strong></p>");
             logMessage (LOGGER_ERROR, "Error {$e} inserting survey.");
+            $this->deldir (session_id ());
+        }
+        if ($filename == false){
+            echo ("<p><strong>Error subiendo archivo: {$this->fileerror}.</strong></p>");
+            $this->deldir (session_id ());
         }
 
     }
@@ -720,14 +877,36 @@ onload='document.getElementById("survey").focus();'>
         if ($surveys->rowCount() == 0)
             return;
         $survey = $surveys->fetch ();
+        if (!empty ($survey['surveyfile'])){
+            $this->havefile = true;
+            $this->filename = $survey['surveyfile'];
+            $this->fileid = $sid;
+        }
     ?>
     <div class="col-md-8">
     <h2>Modificar consulta</h2>
         <form id="modsurvey" name="modsurvey" method="POST" action="survey_manage" 
-onload='document.getElementById("survey").focus();'>
+onload='document.getElementById("survey").focus();' enctype="multipart/form-data">
         <p><label for="survey">Consulta:</label>
             <input type="text" id="survey" name="survey" tabindex="-1"
             value="<?= $survey['surveyname'] ?>"></p>
+        <p><label for="surveydesc">Descripción</label>
+        <textarea class="description" name="surveydesc" id="surveydesc">
+            <?= $survey['surveydesc']; ?>
+        </textarea>
+        </p>
+        <label id="drop-zone" class="drop-zone dragidle">
+        <div id="text-file">Añadir documentación en PDF. Pulsa o arrastra el archivo aquí.</div>
+            <input type="file" id="file-input" accept="application/pdf" name="file-input"
+            class="survey-file"/>
+            <div id="filediv" style="display: none;">
+                <input type="text" name="filename" id="filename" readonly onclick="downloadFile ();">
+                <button type="button" id="del-file" class="button-3" 
+                        onclick="delfile ();">
+                        <img src="img/del.svg" />
+                </button>
+            </div>
+        </label>
         <p><label for="startdate">Inicio:</label>
             <input type="datetime-local" id="startdate" name="startdate"
             value="<?= $survey['startdate'] ?>"></p>
@@ -840,6 +1019,7 @@ onload='document.getElementById("survey").focus();'>
         $surveyname = $_REQUEST['survey'];
         $startstring = $_REQUEST['startdate'];
         $endstring = $_REQUEST['enddate'];
+        $surveydesc = $_REQUEST['surveydesc'];
         $nquestion = 1;
         $noption = 1;
         $questions = array();
@@ -860,17 +1040,25 @@ onload='document.getElementById("survey").focus();'>
             }
             $nquestion++;
         }
+        $filename = $this->saveFile ($sid);
         try {
             $dbconn = dbConn ();
             $dbconn->beginTransaction ();
             try {
                 $query = $dbconn->prepare ("UPDATE {Surveys} " . 
                     " set surveyname = :name, startdate = :start, " . 
-                    "enddate = :end where surveyid = :sid");
+                    "enddate = :end, surveydesc = :desc, surveyfile = :file where surveyid = :sid");
                 $query->bindParam (":name", $surveyname, PDO::PARAM_STR);
                 $query->bindParam (":start", $startstring, PDO::PARAM_STR);
                 $query->bindParam (":end", $endstring, PDO::PARAM_STR);
+                $query->bindParam (":desc", $surveydesc, PDO::PARAM_STR);
                 $query->bindParam (":sid", $sid, PDO::PARAM_INT);
+                if (is_string ($filename)){
+                    $query->bindParam (":file", $filename, PDO::PARAM_STR);
+                }
+                else {
+                    $query->bindParam (":file", "", PDO::PARAM_STR);
+                }
                 $query->execute ();
                 $query = $dbconn->prepare ("DELETE from {Questions} ".
                     " where surveyid = :sid");
@@ -888,5 +1076,88 @@ onload='document.getElementById("survey").focus();'>
             echo ("<strong>Error al modificar la consulta.</strong>");
             logMessage (LOGGER_ERROR, "Error {$e} when modifying survey");
         }
+        if ($filename == false){
+            echo ("<p><strong>Error subiendo archivo: {$this->fileerror}.</strong></p>");
+            $this->deldir ($sid);
+        }
+    }
+
+    private function saveFile ($surveyid): string|bool {
+        $dir = FileParams::FILE_DIR . $surveyid;
+                
+        $fileinfo = $_FILES['file-input'];
+        if (is_array ($fileinfo["error"])){
+            $fileerror = "Solo un archivo por subida";
+            return false;
+        }
+
+        if ($fileinfo["error"] != UPLOAD_ERR_OK && $fileinfo["error"] != UPLOAD_ERR_NO_FILE){
+            $fileerror = "Error {$fileinfo['error']} al subir el archivo {$fileinfo['name']}";
+            return false;
+        }
+        else if ($fileinfo["error"] == UPLOAD_ERR_NO_FILE){
+            return "";
+        }
+        
+        $name = basename($fileinfo["name"]);
+        $tmp_name = $fileinfo["tmp_name"];
+        $res = $this->isPDF ($tmp_name);
+        if ($res == 2){
+            return $name;
+        }
+        else if ($res != 0){
+            $fileerror = "No es un PDF válido";
+
+            return false;
+        }
+        
+        $newname = "{$dir}/{$name}";
+        $this->deldir ($surveyid);
+        mkdir ($dir, 0700, true);
+        move_uploaded_file($tmp_name, $newname);
+        return $name;
+    }
+
+    private function isPDF ($filename): int{
+        $pdfheader = "%PDF-";
+        if(!$handle = fopen($filename, 'r'))
+            return 1;
+
+        if(!$readBytes = fread($handle, 5))
+            return 1;
+        
+        if ($readBytes == FileParams::NO_FILE_CHANGE)
+            return 2;
+
+        if ($readBytes != $pdfheader)
+            return 1;
+        
+
+        return 0;
+    }
+
+    private function deldir ($surveyid) {
+        $src = FileParams::FILE_DIR . $surveyid;
+        if (file_exists($src)) {
+            $dir = opendir($src);
+            while (false !== ($file = readdir($dir))) {
+                if (($file != '.') && ($file != '..')) {
+                    $full = $src . '/' . $file;
+                    if (is_dir($full)) {
+                        $this->deldir($full);
+                    } else {
+                        unlink($full);
+                    }
+                }
+            }
+            closedir($dir);
+            rmdir($src);
+        }
+    }
+
+    private function mvdir ($orig, $dest){
+        $src = FileParams::FILE_DIR . $orig;
+        $dst = FileParams::FILE_DIR . $dest;
+        rename ($src, $dst);
     }
 }

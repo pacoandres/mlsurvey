@@ -62,18 +62,15 @@ class Surveys extends View {
 
     private function addActiveSurveys ($surveys){
         ?>
-        <form id="responsesurvey" name="responsesurvey" method="POST" action="">
+        <form id="responsesurvey" name="responsesurvey" method="POST" action="get_code">
         <script type="text/javascript">
-        function validate_response (location){
-            var selectedradio = document.querySelector('input[name="responseid"]:checked');
-            if (!selectedradio){
-                alert ('No has seleccionado ninguna para entrar');
-                return false;
-            }
-            document.getElementById("responsesurvey").action = location;
+        function getCode (surveyid){
+            const survey = document.getElementById ("responseid");
+            survey.value = surveyid;
             return true;
         }
         </script>
+        <input type="hidden" id="responseid" name="responseid">
         <div class="card-table-container">
             <table class="card-like-table" id="surveystable">
                 <thead><tr>
@@ -88,19 +85,14 @@ class Surveys extends View {
                         <td><span class="username" id="svr-<?= $id; ?>"><?= $survey['surveyname']?></span></td>
                         <td><?= $survey['dstart'] ?></td>
                         <td><?= $survey['dend'] ?></td>
-                        <td><input type="radio" name="responseid" value="<?= $id; ?>" id="rrb-<?= $id; ?>"></td>
+                        <td><input type="submit" class="button-3" onclick="return getCode (<?= $id; ?>);"
+                            value="Ver y participar" name="<?= self::SURVEY_RESPONSE; ?>"></td>
                     </tr>
                     <?php
                 }
                 ?>
                 </tbody>
             </table>
-            <p>
-                <input type="submit" class="button-3" name="<?= self::SURVEY_RESPONSE; ?>" 
-                    onclick="return validate_response ('get_code');" value="<?= self::RESPONSE_VALUES['code']; ?>">
-                <input type="submit" class="button-3" name="<?= self::SURVEY_RESPONSE; ?>" 
-                    onclick="return validate_response ('response_survey');" value="<?= self::RESPONSE_VALUES['response'] ?>">
-            </p>
         </div>
         </form>
         <?php
