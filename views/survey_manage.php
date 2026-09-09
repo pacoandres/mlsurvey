@@ -1,7 +1,7 @@
 <?php
 require_once 'ifaces/view.php';
 require_once 'utils/user.php';
-requere_once 'include/fileparams.php';
+require_once 'include/fileparams.php';
 
 enum SurveyJavascript {
         case NoJavascript;
@@ -213,7 +213,7 @@ class SurveyManage extends View {
         <style>
             .drop-zone {
                 display: block;
-                width: 75%;
+                width: 95%;
                 padding: 1em;
                 border-radius: 4px;
                 color: slategray;
@@ -232,6 +232,8 @@ class SurveyManage extends View {
 
             #filename {
                 cursor: pointer;
+                field-sizing: content;
+                max-width: 75%;
             }
         </style>
         <?php
@@ -478,6 +480,11 @@ onload='document.getElementById("survey").focus();' enctype="multipart/form-data
                     }
                 });
                 <?=  $this->havefile ? "addFile ('{$this->filename}');" : ""?>
+
+                const fileinput = document.getElementById("file-input");
+                fileinput.addEventListener("change", function (){
+                    showFile (this.files[0].name); 
+                });
             })
 
             function downloadFile(){

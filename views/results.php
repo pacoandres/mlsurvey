@@ -1,5 +1,6 @@
 <?php
-
+require_once 'utils/dbutils.php';
+require_once 'include/fileparams.php';
 class Results extends View {
 
     private const RESULTS_COLORS = [
@@ -28,7 +29,8 @@ class Results extends View {
         $surveyid = $_REQUEST["queryid"];
         try {
             $db = dbConn ();
-            $surveys = $db->prepare ("SELECT surveyname from {Surveys} WHERE surveyid = :sid");
+            $surveys = $db->prepare ("SELECT surveyname, surveydesc, surveyfile " . 
+            "FROM {Surveys} WHERE surveyid = :sid");
             $surveys->bindParam (":sid", $surveyid, PDO::PARAM_INT);
             $surveys->execute ();
             if ($surveys->rowCount () == 0){
@@ -36,7 +38,10 @@ class Results extends View {
                 logMessage (LOGGER_ERROR, "Can't find surveyid {$surveyid}");
                 return;
             }
-            $surveyname = $surveys->fetch ()['surveyname'];
+            $survey = $surveys->fetch ();
+            $surveyname = $survey['surveyname'];
+            $surveydesc = $survey["surveydesc"];
+            $surveyfile = $survey["surveyfile"];
             $surveys->closeCursor ();
 
             $results = $db->prepare ("SELECT results FROM {Results} WHERE surveyid = :sid");
@@ -54,8 +59,11 @@ class Results extends View {
                 logMessage (LOGGER_ERROR, "Malformed results JSON for survey {$surveyid}");
                 return;
             }
+            $thefile = FileParams::FILE_DIR . $surveyid . "/" . $surveyfile;
             ?>
             <h2>Mostrando resultados para la consulta <?= $surveyname;?>.</h2>
+            <?= empty ($surveydesc)?"": "<div>{$surveydesc}</div>";?>
+            <?= empty ($surveyfile)?"":"Documentación adjunta: <a href='{$surveyfile}'";?>
             <p><em>En esta consulta han participado <?= $resultsarray["Total"]; ?> personas.</em></p>
             <?php
             $questions = $db->prepare ("SELECT * FROM {Questions} WHERE surveyid = :sid");

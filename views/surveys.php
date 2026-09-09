@@ -101,16 +101,14 @@ class Surveys extends View {
     private function addEndedSurveys ($surveys){
         ?>
         <script type="text/javascript">
-        function validate_query (){
-            var selectedradio = document.querySelector('input[name="queryid"]:checked');
-            if (!selectedradio){
-                alert ('No has seleccionado ninguna para ver resultados');
-                return false;
-            }
+        function queryResults ($id){
+            const query = document.getElementById ("queryid");
+            query.value = $id;
             return true;
         }
         </script>
         <form id="resultsesurvey" name="resultsesurvey" method="GET" action="results">
+        <input type="hidden" name="queryid" id="queryid">
         <div class="card-table-container">
             <table class="card-like-table" id="surveystable">
                 <thead><tr>
@@ -125,19 +123,14 @@ class Surveys extends View {
                         <td><span class="username" id="svr-<?= $id; ?>"><?= $survey['surveyname']?></span></td>
                         <td><?= $survey['dstart'] ?></td>
                         <td><?= $survey['dend'] ?></td>
-                        <td><input type="radio" name="queryid" value="<?= $id; ?>" id="qrb-<?= $id; ?>"></td>
+                        <td><input type="submit" class="button-3"
+                            onclick="return queryResults (<?= $id; ?>);" value="Ver resultado"></td>
                     </tr>
                     <?php
                 }
                 ?>
                 </tbody>
             </table>
-            <p>
-                <!--<input type="submit" class="button-3" name="<?= self::SURVEY_QUERY; ?>" 
-                    onclick="return validate_query ();" value="Ver resultado">-->
-                <input type="submit" class="button-3"
-                    onclick="return validate_query ();" value="Ver resultado">
-            </p>
         </div>
         </form>
         <?php
