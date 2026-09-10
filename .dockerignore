@@ -1,0 +1,14 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+composer.json
+composer.lock
+vendor/
+config/config.php
+files/
+log/
+logs/
+test/
+img/old/

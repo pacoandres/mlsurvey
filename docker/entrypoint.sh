@@ -1,0 +1,60 @@
+#!/bin/sh
+set -e
+
+APP_DIR=/var/www/html
+CONFIG_FILE="${APP_DIR}/config/config.php"
+MARKER="generado por el entrypoint de docker"
+
+DB_HOST="${DB_HOST:-db}"
+DB_PORT="${DB_PORT:-3306}"
+DB_NAME="${DB_NAME:-mlsurvey}"
+DB_USER="${DB_USER:-mlsurvey}"
+
+# config/config.php se genera leyendo el entorno: si montas el tuyo propio, se respeta.
+if [ -f "$CONFIG_FILE" ] && ! grep -q "$MARKER" "$CONFIG_FILE" 2>/dev/null; then
+    echo "[mlsurvey] config/config.php propio detectado, no se sobreescribe."
+else
+    echo "[mlsurvey] generando config/config.php desde las variables de entorno."
+    cat > "$CONFIG_FILE" <<'PHPEOF'
+<?php
+/* Fichero generado por el entrypoint de docker. No editar: usa variables de entorno. */
+$db_host   = getenv('DB_HOST')   ?: 'db';
+$db_name   = getenv('DB_NAME')   ?: 'mlsurvey';
+$db_user   = getenv('DB_USER')   ?: 'mlsurvey';
+$db_pass   = getenv('DB_PASSWORD') ?: '';
+$db_port   = getenv('DB_PORT')   ?: 3306;
+$db_prefix = getenv('DB_PREFIX') ?: '';
+
+$proxy_path = getenv('PROXY_PATH') ?: '';
+$proxy_port = getenv('PROXY_PORT') ?: '';
+
+$log_level = (int) (getenv('LOG_LEVEL') !== false ? getenv('LOG_LEVEL') : 0);
+PHPEOF
+    chown www-data:www-data "$CONFIG_FILE"
+    chmod 640 "$CONFIG_FILE"
+fi
+
+# Esperar a la base de datos (el init de MariaDB tarda en cargar modelo_datos.sql).
+echo "[mlsurvey] esperando a MariaDB en ${DB_HOST}:${DB_PORT} ..."
+i=0
+until php -r '
+    $dsn = "mysql:host=" . getenv("DB_HOST") . ";port=" . getenv("DB_PORT") . ";dbname=" . getenv("DB_NAME");
+    try { new PDO($dsn, getenv("DB_USER"), getenv("DB_PASSWORD")); exit(0); }
+    catch (Throwable $e) { exit(1); }
+' 2>/dev/null; do
+    i=$((i + 1))
+    if [ "$i" -ge 60 ]; then
+        echo "[mlsurvey] AVISO: la base de datos no responde, se arranca igualmente."
+        break
+    fi
+    sleep 2
+done
+
+# Usuario administrador inicial (opcional). Si ya existe, addusercmd.php lo indica y seguimos.
+if [ -n "$ADMIN_USER" ] && [ -n "$ADMIN_PASSWORD" ]; then
+    echo "[mlsurvey] comprobando usuario administrador '${ADMIN_USER}'."
+    ( cd "$APP_DIR" && php addusercmd.php "$ADMIN_USER" "$ADMIN_PASSWORD" ) || \
+        echo "[mlsurvey] el usuario administrador ya existia o no se pudo crear."
+fi
+
+exec "$@"

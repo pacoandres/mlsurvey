@@ -1,0 +1,54 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    ports:
+      - 3306:3306
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-mlsurvey}
+      MARIADB_USER: ${DB_USER:-mlsurvey}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-mlsurvey}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-mlsurvey-root}
+    volumes:
+      - db_data:/var/lib/mysql
+      # Se carga solo la primera vez, cuando el volumen db_data esta vacio.
+      - ./modelo_datos.sql:/docker-entrypoint-initdb.d/01-modelo_datos.sql:ro
+      - ./test-data.sql:/docker-entrypoint-initdb.d/02-test_data.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-mlsurvey}
+      DB_USER: ${DB_USER:-mlsurvey}
+      DB_PASSWORD: ${DB_PASSWORD:-mlsurvey}
+      DB_PREFIX: ${DB_PREFIX:-}
+      # Rellenar si la aplicacion esta detras de un proxy inverso.
+      PROXY_PATH: ${PROXY_PATH:-}
+      PROXY_PORT: ${PROXY_PORT:-}
+      # 0: error, 1: warn, 2: info, 3: debug. En produccion 0.
+      LOG_LEVEL: ${LOG_LEVEL:-0}
+      # Administrador inicial: se crea al arrancar si no existe.
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    volumes:
+      - uploads:/var/www/html/files
+      # Para desarrollo, descomenta para editar el codigo sin reconstruir la imagen:
+      # - ./:/var/www/html
+
+volumes:
+  db_data:
+  uploads:
