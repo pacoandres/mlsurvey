@@ -4,7 +4,7 @@ CREATE TABLE Users (
 	passwd TEXT NOT NULL,
 	`role` TEXT NULL,
 	CONSTRAINT Users_PK PRIMARY KEY (userid)
-)
+);
 
 CREATE TABLE Surveys (
 	surveyid INT UNSIGNED auto_increment NOT NULL,
@@ -75,7 +75,8 @@ CREATE TABLE Participation (
 	CONSTRAINT Participation_PK PRIMARY KEY (participationid),
 	CONSTRAINT Participation_surveys_FK FOREIGN KEY (surveyid) REFERENCES Surveys(surveyid) ON DELETE RESTRICT ON UPDATE RESTRICT
 );
-CREATE INDEX Participants_participant_survey_IDX USING BTREE ON Participation (participantid, surveyid);
+/*Participation no tiene columna participantid: indice obsoleto, igual que los de Responses.
+CREATE INDEX Participants_participant_survey_IDX USING BTREE ON Participation (participantid, surveyid);*/
 
 CREATE TABLE Responses (
 	responseid INT UNSIGNED auto_increment NOT NULL,
