@@ -11,9 +11,10 @@ Clearly, someone with access to the database who knew the email addresses of all
 ## Manual installation
 ### Requirements
 This application needs a LAMP server:
-   * Apache + PHP >=8.3 with PDO and PDO_mysql
-   * MariaDB >=11.4
-   * Composer
+* Apache + PHP >=8.3 with PDO and PDO_mysql
+* MariaDB >=11.4
+* Composer
+
 MariaDB must be initialized and configured with an user and a database for the application.
 
 ### Download
