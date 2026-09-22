@@ -173,6 +173,11 @@ $view->addHead ();
 						<li><a href="#" data-placement="top" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
 						<li><a href="#" data-placement="top" title="Pinterest"><i class="fa fa-pinterest"></i></a></li>
 						<li><a href="#" data-placement="top" title="Google plus"><i class="fa fa-google-plus"></i></a></li>
+						<!--
+						<i class="fa-brands fa-mastodon"></i>
+						<i class="fa-brands fa-bluesky"></i>
+						<i class="fa-brands fa-telegram"></i>
+						-->
 					</ul>
 				</div>
 			</div>

@@ -64,6 +64,11 @@ class GetCode extends View {
                 <h3>Participar en la consulta</h3>
                 <p>Introduce tu dirección de correo y te enviaremos un enlace personal
                     para participar.</p>
+                <p>Si la dirección es de un <em>dominio autorizado</em><sup>*</sup> recibirás un mensaje con un enlace.
+                   Comprueba tu correo y pincha en el enlace para participar. El enlace recibido caduca en
+                   una hora.</p>
+                <p>Si quieres pensarte las respuestas antes de introducir tu dirección de correo, puedes
+                   verlas pinchando en <em>Ver las preguntas de la consulta</em> debajo de este recuadro.</p>
                 <form id="getcode" name="getcode" method="POST" action="get_code">
                     <?= setTokenHTML (); ?>
                     <label for="email">Dirección de correo</label>
@@ -74,6 +79,10 @@ class GetCode extends View {
                             name="<?= self::ACTION; ?>" value="<?= self::ACTION; ?>">
                             Participar en la consulta</button>
                     </div>
+                    <p><small><em>* Los dominios autorizados son:
+                       <?= Config::$alloweddomains == ""? "cualquiera" : str_replace (" ", ", ",
+                           Config::$alloweddomains);?>
+                    </em></small></p>
                 </form>
             </section>
 
