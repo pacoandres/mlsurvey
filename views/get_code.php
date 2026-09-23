@@ -81,7 +81,12 @@ class GetCode extends View {
                    verlas pinchando en <em>Ver las preguntas de la consulta</em> debajo de este recuadro.</p>
                 <form id="getcode" name="getcode" method="POST" action="get_code">
                     <?= setTokenHTML (); ?>
-                    <label for="email">Dirección de correo</label>
+                    <label for="email">Dirección de correo
+                      <p><small><em>* Los dominios autorizados son:
+                       <?= Config::$alloweddomains == ""? "cualquiera" : str_replace (" ", ", ",
+                           Config::$alloweddomains);?>
+                       </em></small></p>
+                    </label>
                     <div class="ml-participate-row">
                         <input type="email" name="email" id="email" required
                             placeholder="nombre@dominio.es" autocomplete="email">
@@ -90,10 +95,6 @@ class GetCode extends View {
                             name="<?= self::ACTION; ?>" value="<?= self::ACTION; ?>">
                             Participar en la consulta</button>
                     </div>
-                    <p><small><em>* Los dominios autorizados son:
-                       <?= Config::$alloweddomains == ""? "cualquiera" : str_replace (" ", ", ",
-                           Config::$alloweddomains);?>
-                    </em></small></p>
                 </form>
             </section>
 
