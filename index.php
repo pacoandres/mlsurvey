@@ -148,7 +148,7 @@ $view->addHead ();
 			<div class="widget">
 				<!-- Personalizar con los datos reales de contacto. -->
 				<h5 class="widgetheading">Contacto</h5>
-				<address>administradora@dominio.org</address>
+				<address><?= empty (Config::$contact)?"No definido":Config::$contact; ?></address>
 			</div>
 		</div>
 	</div>
